@@ -29,6 +29,13 @@ YIELD_SYMBOLS = [
     ("미국채30년", "%5ETYX"),
 ]
 
+# PHLX Semiconductor Sector Index (SOX) constituents (30 members)
+SOX_CONSTITUENTS = [
+    "NVDA", "AVGO", "MU", "AMAT", "ASML", "TSM", "KLAC", "AMD", "LRCX", "MRVL",
+    "TXN", "ADI", "INTC", "MPWR", "QCOM", "NXPI", "TER", "ALAB", "COHR", "MCHP",
+    "CRDO", "ARM", "ON", "GFS", "MTSI", "ENTG", "NVMI", "RMBS", "SWKS", "QRVO",
+]
+
 
 def fetch_price_change(symbol):
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
@@ -70,6 +77,24 @@ def format_yield_line(name, symbol):
         return f"{name} (데이터 없음)"
 
 
+def fetch_sox_ranked_movers():
+    movers = []
+    for ticker in SOX_CONSTITUENTS:
+        try:
+            price, change, percent = fetch_price_change(ticker)
+            movers.append((ticker, price, change, percent))
+        except Exception:
+            continue
+    movers.sort(key=lambda x: x[3], reverse=True)
+    return movers
+
+
+def format_mover_line(mover):
+    ticker, price, change, percent = mover
+    arrow = "▲" if change >= 0 else "▼"
+    return f"{ticker} {price:,.2f} {arrow}{abs(change):,.2f} ({percent:+.2f}%)"
+
+
 def build_message():
     lines = ["📊 해외 주요지수 (전일 마감 기준)"]
     lines += [format_index_line(name, sym) for name, sym in INDEX_SYMBOLS]
@@ -79,6 +104,21 @@ def build_message():
     lines.append("")
     lines.append("🏦 미국채 금리")
     lines += [format_yield_line(name, sym) for name, sym in YIELD_SYMBOLS]
+
+    movers = fetch_sox_ranked_movers()
+    lines.append("")
+    lines.append("🔺 필라델피아반도체 상승률 TOP5")
+    if movers:
+        lines += [format_mover_line(m) for m in movers[:5]]
+    else:
+        lines.append("(데이터 없음)")
+    lines.append("")
+    lines.append("🔻 필라델피아반도체 하락률 TOP5")
+    if movers:
+        lines += [format_mover_line(m) for m in movers[-5:][::-1]]
+    else:
+        lines.append("(데이터 없음)")
+
     return "\n".join(lines)
 
 
