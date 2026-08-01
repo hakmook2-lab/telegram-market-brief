@@ -24,6 +24,11 @@ FX_SYMBOLS = [
     ("WTI", "CL=F"),
 ]
 
+YIELD_SYMBOLS = [
+    ("미국채10년", "%5ETNX"),
+    ("미국채30년", "%5ETYX"),
+]
+
 
 def fetch_price_change(symbol):
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
@@ -55,12 +60,25 @@ def format_fx_line(name, symbol):
         return f"{name} (데이터 없음)"
 
 
+def format_yield_line(name, symbol):
+    try:
+        price, change, _ = fetch_price_change(symbol)
+        arrow = "▲" if change >= 0 else "▼"
+        bp = abs(change) * 100
+        return f"{name} {price:.3f}% {arrow}{bp:.1f}bp"
+    except Exception:
+        return f"{name} (데이터 없음)"
+
+
 def build_message():
     lines = ["📊 해외 주요지수 (전일 마감 기준)"]
     lines += [format_index_line(name, sym) for name, sym in INDEX_SYMBOLS]
     lines.append("")
     lines.append("💱 환율 / 유가")
     lines += [format_fx_line(name, sym) for name, sym in FX_SYMBOLS]
+    lines.append("")
+    lines.append("🏦 미국채 금리")
+    lines += [format_yield_line(name, sym) for name, sym in YIELD_SYMBOLS]
     return "\n".join(lines)
 
 
