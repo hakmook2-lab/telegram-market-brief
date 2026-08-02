@@ -2,7 +2,7 @@ name: Daily Market Briefing
 
 on:
   schedule:
-    - cron: "0 1 * * *"  # 08:00 Jakarta (UTC+7) daily
+    - cron: "3 3 * * *"  # TEMP: scheduler firing test
   workflow_dispatch: {}
 
 jobs:
