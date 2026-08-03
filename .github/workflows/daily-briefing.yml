@@ -2,7 +2,10 @@ name: Daily Market Briefing
 
 on:
   schedule:
-    - cron: "17 1 * * *"  # 08:17 Jakarta (UTC+7) daily — offset from :00 to avoid GitHub's peak-load scheduling delays
+    # Target delivery: 07:00-08:00 Jakarta. GitHub's scheduler runs late under load
+    # (observed ~2h45m), so this fires at 05:00 Jakarta to absorb the drift.
+    # US close is 03:00 Jakarta, so the previous close is always available by then.
+    - cron: "0 22 * * *"
   workflow_dispatch: {}
 
 jobs:
