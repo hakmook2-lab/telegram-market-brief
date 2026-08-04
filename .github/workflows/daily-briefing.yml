@@ -1,11 +1,9 @@
 name: Daily Market Briefing
 
+# Triggered externally by cron-job.org at 07:00 Asia/Jakarta via the workflow
+# dispatch API. GitHub's own `schedule:` was dropped because it ran up to ~2h45m
+# late; the external trigger fires within a minute of the target time.
 on:
-  schedule:
-    # Target delivery: 07:00-08:00 Jakarta. GitHub's scheduler runs late under load
-    # (observed ~2h45m), so this fires at 05:00 Jakarta to absorb the drift.
-    # US close is 03:00 Jakarta, so the previous close is always available by then.
-    - cron: "0 22 * * *"
   workflow_dispatch: {}
 
 jobs:
