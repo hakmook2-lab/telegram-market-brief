@@ -1,0 +1,21 @@
+{
+  "indices": [
+    ["다우산업", "%5EDJI"],
+    ["다우운송", "%5EDJT"],
+    ["나스닥종합", "%5EIXIC"],
+    ["나스닥100", "%5ENDX"],
+    ["S&P500", "%5EGSPC"],
+    ["필라델피아반도체", "%5ESOX"]
+  ],
+  "fx": [
+    ["USD/KRW", "KRW=X"],
+    ["USD/JPY", "JPY=X"],
+    ["USD/IDR", "IDR=X"],
+    ["KRW/IDR", "KRWIDR=X"],
+    ["WTI", "CL=F"]
+  ],
+  "yields": [
+    ["미국채10년", "%5ETNX"],
+    ["미국채30년", "%5ETYX"]
+  ]
+}

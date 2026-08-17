@@ -1,0 +1,42 @@
+name: Telegram Command Bot
+
+# Polls for commands every 5 minutes. Timing drift does not matter here — a late
+# poll just means a slightly later reply — so GitHub's own scheduler is fine.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telegram-bot-poll
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - run: python bot_poll.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+
+      - name: Commit config changes
+        run: |
+          if git diff --quiet config.json; then
+            echo "no config change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update watch list from Telegram command" config.json
+          git push

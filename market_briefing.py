@@ -1,35 +1,33 @@
+import json
 import os
 import sys
+from pathlib import Path
+
 import requests
 
 sys.stdout.reconfigure(encoding="utf-8")
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+DEFAULT_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
+CONFIG_PATH = Path(__file__).with_name("config.json")
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-INDEX_SYMBOLS = [
-    ("다우산업", "%5EDJI"),
-    ("다우운송", "%5EDJT"),
-    ("나스닥종합", "%5EIXIC"),
-    ("나스닥100", "%5ENDX"),
-    ("S&P500", "%5EGSPC"),
-    ("필라델피아반도체", "%5ESOX"),
+SECTIONS = [
+    ("indices", "📊 해외 주요지수 (전일 마감 기준)"),
+    ("fx", "💱 환율 / 유가"),
+    ("yields", "🏦 미국채 금리"),
 ]
 
-FX_SYMBOLS = [
-    ("USD/KRW", "KRW=X"),
-    ("USD/JPY", "JPY=X"),
-    ("USD/IDR", "IDR=X"),
-    ("KRW/IDR", "KRWIDR=X"),
-    ("WTI", "CL=F"),
-]
 
-YIELD_SYMBOLS = [
-    ("미국채10년", "%5ETNX"),
-    ("미국채30년", "%5ETYX"),
-]
+def load_config():
+    return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+def save_config(config):
+    CONFIG_PATH.write_text(
+        json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def fetch_price_change(symbol):
@@ -44,49 +42,38 @@ def fetch_price_change(symbol):
     return price, change, percent
 
 
-def format_index_line(name, symbol):
+def format_line(section, name, symbol):
     try:
         price, change, percent = fetch_price_change(symbol)
-        arrow = "▲" if change >= 0 else "▼"
+    except Exception:
+        return f"{name} (데이터 없음)"
+    arrow = "▲" if change >= 0 else "▼"
+    if section == "indices":
         return f"{name} {price:,.2f} {arrow}{abs(change):,.2f} ({percent:+.2f}%)"
-    except Exception:
-        return f"{name} (데이터 없음)"
+    if section == "yields":
+        return f"{name} {price:.3f}% {arrow}{abs(change) * 100:.1f}bp"
+    return f"{name} {price:,.2f} {arrow}{abs(change):,.2f}"
 
 
-def format_fx_line(name, symbol):
-    try:
-        price, change, _ = fetch_price_change(symbol)
-        arrow = "▲" if change >= 0 else "▼"
-        return f"{name} {price:,.2f} {arrow}{abs(change):,.2f}"
-    except Exception:
-        return f"{name} (데이터 없음)"
+def build_message(config=None):
+    config = config or load_config()
+    blocks = []
+    for section, heading in SECTIONS:
+        entries = config.get(section, [])
+        if not entries:
+            continue
+        lines = [heading]
+        lines += [format_line(section, name, sym) for name, sym in entries]
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
-def format_yield_line(name, symbol):
-    try:
-        price, change, _ = fetch_price_change(symbol)
-        arrow = "▲" if change >= 0 else "▼"
-        bp = abs(change) * 100
-        return f"{name} {price:.3f}% {arrow}{bp:.1f}bp"
-    except Exception:
-        return f"{name} (데이터 없음)"
-
-
-def build_message():
-    lines = ["📊 해외 주요지수 (전일 마감 기준)"]
-    lines += [format_index_line(name, sym) for name, sym in INDEX_SYMBOLS]
-    lines.append("")
-    lines.append("💱 환율 / 유가")
-    lines += [format_fx_line(name, sym) for name, sym in FX_SYMBOLS]
-    lines.append("")
-    lines.append("🏦 미국채 금리")
-    lines += [format_yield_line(name, sym) for name, sym in YIELD_SYMBOLS]
-    return "\n".join(lines)
-
-
-def send_telegram(text):
+def send_telegram(text, chat_id=None):
+    chat_id = chat_id or DEFAULT_CHAT_ID
+    if not chat_id:
+        raise RuntimeError("No chat id: set TELEGRAM_CHAT_ID or pass chat_id")
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    resp = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": text}, timeout=10)
+    resp = requests.post(url, data={"chat_id": chat_id, "text": text}, timeout=10)
     print(f"Telegram response: {resp.status_code} / {resp.text}")
     resp.raise_for_status()
     if not resp.json().get("ok"):
