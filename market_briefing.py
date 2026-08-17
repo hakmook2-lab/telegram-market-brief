@@ -56,26 +56,25 @@ def format_line(section, name, symbol):
     return f"{name} {price:,.2f} {arrow}{abs(change):,.2f}"
 
 
-def fetch_monthly_closes(symbol):
-    """Month-end closes keyed by (year, month), oldest first.
+def fetch_monthly_averages(symbol):
+    """Mean of daily closes per month, keyed by (year, month).
 
-    Yahoo appends the running month as an extra point alongside its month-start
-    bucket, so later points overwrite earlier ones within the same month — which
-    leaves the current month holding its latest value rather than a stale one.
+    Averaged from daily bars rather than read off monthly bars, because a
+    monthly bar carries the month's closing value, not its average.
     """
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-    params = {"range": "2y", "interval": "1mo"}
+    params = {"range": "1y", "interval": "1d"}
     resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     result = resp.json()["chart"]["result"][0]
 
-    closes = {}
+    buckets = {}
     for ts, close in zip(result["timestamp"], result["indicators"]["quote"][0]["close"]):
         if close is None:
             continue
         date = datetime.fromtimestamp(ts, timezone.utc)
-        closes[(date.year, date.month)] = close
-    return closes
+        buckets.setdefault((date.year, date.month), []).append(close)
+    return {key: sum(vals) / len(vals) for key, vals in buckets.items()}
 
 
 def build_trend_block(config):
@@ -85,19 +84,19 @@ def build_trend_block(config):
     name, symbol = entry
 
     try:
-        closes = fetch_monthly_closes(symbol)
+        averages = fetch_monthly_averages(symbol)
     except Exception:
-        return f"📈 {name} 월별 추이\n(데이터 없음)"
-    if not closes:
-        return f"📈 {name} 월별 추이\n(데이터 없음)"
+        averages = {}
+    if not averages:
+        return f"📈 {name} 월평균 추이\n(데이터 없음)"
 
-    year = max(y for y, _ in closes)
-    months = sorted(m for y, m in closes if y == year)
+    year = max(y for y, _ in averages)
+    months = sorted(m for y, m in averages if y == year)
 
-    lines = [f"📈 {name} 월별 추이 ({year})"]
+    lines = [f"📈 {name} 월평균 추이 ({year})"]
     for month in months:
-        suffix = " (현재)" if month == months[-1] else ""
-        lines.append(f"{year % 100}.{month}월: {closes[(year, month)]:.3f}%{suffix}")
+        suffix = " (진행중)" if month == months[-1] else ""
+        lines.append(f"{year % 100}.{month}월: {averages[(year, month)]:.3f}%{suffix}")
     return "\n".join(lines)
 
 
