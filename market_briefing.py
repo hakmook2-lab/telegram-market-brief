@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -55,6 +56,51 @@ def format_line(section, name, symbol):
     return f"{name} {price:,.2f} {arrow}{abs(change):,.2f}"
 
 
+def fetch_monthly_closes(symbol):
+    """Month-end closes keyed by (year, month), oldest first.
+
+    Yahoo appends the running month as an extra point alongside its month-start
+    bucket, so later points overwrite earlier ones within the same month — which
+    leaves the current month holding its latest value rather than a stale one.
+    """
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": "2y", "interval": "1mo"}
+    resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
+    resp.raise_for_status()
+    result = resp.json()["chart"]["result"][0]
+
+    closes = {}
+    for ts, close in zip(result["timestamp"], result["indicators"]["quote"][0]["close"]):
+        if close is None:
+            continue
+        date = datetime.fromtimestamp(ts, timezone.utc)
+        closes[(date.year, date.month)] = close
+    return closes
+
+
+def build_trend_block(config):
+    entry = config.get("trend")
+    if not entry:
+        return None
+    name, symbol = entry
+
+    try:
+        closes = fetch_monthly_closes(symbol)
+    except Exception:
+        return f"📈 {name} 월별 추이\n(데이터 없음)"
+    if not closes:
+        return f"📈 {name} 월별 추이\n(데이터 없음)"
+
+    year = max(y for y, _ in closes)
+    months = sorted(m for y, m in closes if y == year)
+
+    lines = [f"📈 {name} 월별 추이 ({year})"]
+    for month in months:
+        suffix = " (현재)" if month == months[-1] else ""
+        lines.append(f"{year % 100}.{month}월: {closes[(year, month)]:.3f}%{suffix}")
+    return "\n".join(lines)
+
+
 def build_message(config=None):
     config = config or load_config()
     blocks = []
@@ -65,6 +111,10 @@ def build_message(config=None):
         lines = [heading]
         lines += [format_line(section, name, sym) for name, sym in entries]
         blocks.append("\n".join(lines))
+
+    trend = build_trend_block(config)
+    if trend:
+        blocks.append(trend)
     return "\n\n".join(blocks)
 
 
