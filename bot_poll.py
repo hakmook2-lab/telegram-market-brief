@@ -23,7 +23,7 @@ SECTION_ALIASES = {
     "환율": "fx", "유가": "fx", "fx": "fx",
     "금리": "yields", "yield": "yields", "yields": "yields",
 }
-SECTION_LABELS = {"indices": "지수", "fx": "환율/유가", "yields": "금리"}
+SECTION_LABELS = {"indices": "지수", "fx": "환율/원자재", "yields": "금리"}
 
 HELP = """📖 사용 가능한 명령
 
