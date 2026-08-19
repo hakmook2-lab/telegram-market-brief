@@ -12,11 +12,17 @@
     ["USD/JPY", "JPY=X"],
     ["USD/IDR", "IDR=X"],
     ["KRW/IDR", "KRWIDR=X"],
-    ["WTI", "CL=F"]
+    ["WTI", "CL=F"],
+    ["금", "GC=F"],
+    ["비트코인", "BTC-USD"]
   ],
   "yields": [
     ["미국채10년", "%5ETNX"],
     ["미국채30년", "%5ETYX"]
   ],
-  "trend": ["미국채10년", "%5ETNX"]
+  "trends": [
+    ["미국채10년", "%5ETNX", "pct"],
+    ["금", "GC=F", "num"],
+    ["비트코인", "BTC-USD", "num"]
+  ]
 }

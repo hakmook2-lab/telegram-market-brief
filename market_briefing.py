@@ -77,12 +77,13 @@ def fetch_monthly_averages(symbol):
     return {key: sum(vals) / len(vals) for key, vals in buckets.items()}
 
 
-def build_trend_block(config):
-    entry = config.get("trend")
-    if not entry:
-        return None
-    name, symbol = entry
+def format_trend_value(kind, value):
+    if kind == "pct":
+        return f"{value:.3f}%"
+    return f"{value:,.0f}" if value >= 10000 else f"{value:,.2f}"
 
+
+def build_trend_block(name, symbol, kind):
     try:
         averages = fetch_monthly_averages(symbol)
     except Exception:
@@ -96,7 +97,8 @@ def build_trend_block(config):
     lines = [f"📈 {name} 월평균 추이 ({year})"]
     for month in months:
         suffix = " (진행중)" if month == months[-1] else ""
-        lines.append(f"{year % 100}.{month}월: {averages[(year, month)]:.3f}%{suffix}")
+        value = format_trend_value(kind, averages[(year, month)])
+        lines.append(f"{year % 100}.{month}월: {value}{suffix}")
     return "\n".join(lines)
 
 
@@ -111,9 +113,8 @@ def build_message(config=None):
         lines += [format_line(section, name, sym) for name, sym in entries]
         blocks.append("\n".join(lines))
 
-    trend = build_trend_block(config)
-    if trend:
-        blocks.append(trend)
+    for name, symbol, kind in config.get("trends", []):
+        blocks.append(build_trend_block(name, symbol, kind))
     return "\n\n".join(blocks)
 
 
