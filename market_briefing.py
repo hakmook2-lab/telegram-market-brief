@@ -16,7 +16,7 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 SECTIONS = [
     ("indices", "📊 해외 주요지수 (전일 마감 기준)"),
-    ("fx", "💱 환율 / 유가"),
+    ("fx", "💱 환율 / 원자재"),
     ("yields", "🏦 미국채 금리"),
 ]
 
